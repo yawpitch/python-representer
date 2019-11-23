@@ -2,17 +2,23 @@
 Representer for Python.
 """
 import ast
+import builtins
 from itertools import count
 from typing import Dict, Optional
 
-from .utils import md5sum
+import astor
 
-NO_SHADOW = set(dir(__builtins__)).union(["self"])
+from representer import utils
 
 
-class RepresenterTransformer(ast.NodeTransformer):
+class Normalizer(ast.NodeTransformer):
+    """
+    Visits each node in an ast.AST and normalizes the tree for representation.
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._no_shadow = set(dir(builtins)).union(["self"])
         self._placeholders = (f"PLACEHOLDER_{i}" for i in count())
         self._placeholder_cache = {}
         self._docstring_cache = set()
@@ -21,7 +27,7 @@ class RepresenterTransformer(ast.NodeTransformer):
         """
         Add an identifier name to the placeholder cache.
         """
-        if name in NO_SHADOW:
+        if name in self._no_shadow:
             return name
         if name not in self._placeholder_cache:
             self._placeholder_cache[name] = next(self._placeholders)
@@ -37,7 +43,7 @@ class RepresenterTransformer(ast.NodeTransformer):
         """
         Get the placeholder assignments after walking the tree.
         """
-        return {v:k for k,v in self._placeholder_cache.items()}
+        return {v: k for k, v in self._placeholder_cache.items()}
 
     def register_docstring(self, node: ast.AST) -> None:
         """
@@ -45,7 +51,7 @@ class RepresenterTransformer(ast.NodeTransformer):
         """
         docstring = ast.get_docstring(node, clean=False)
         if docstring:
-            self._docstring_cache.add(md5sum(docstring))
+            self._docstring_cache.add(utils.md5sum(docstring))
 
     def visit_Module(self, node: ast.Module) -> ast.Module:
         """
@@ -106,7 +112,8 @@ class RepresenterTransformer(ast.NodeTransformer):
         """
         The "as" alias in `import module as name`.
         """
-        node.asname = self.add_placeholder(node.asname)
+        if node.asname:
+            node.asname = self.add_placeholder(node.asname)
         self.generic_visit(node)
         return node
 
@@ -195,8 +202,7 @@ class RepresenterTransformer(ast.NodeTransformer):
         """
         if isinstance(node.value, ast.Constant):
             # eliminate registered docstrings
-            if md5sum(node.value.value) in self._docstring_cache:
+            if utils.md5sum(node.value.value) in self._docstring_cache:
                 return None
         self.generic_visit(node)
         return node
-

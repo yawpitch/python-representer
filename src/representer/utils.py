@@ -1,6 +1,8 @@
 """
 Representer for Python.
 """
+import ast
+import astor
 import errno
 import json
 import os
@@ -73,3 +75,24 @@ def to_json(data: dict) -> str:
     Reformat to pretty-print JSON for writing to disk.
     """
     return json.dumps(data, indent=4, sort_keys=False)
+
+
+def parse(source: str) -> ast.AST:
+    """
+    Wrapper around ast.parse.
+    """
+    return ast.parse(source)
+
+
+def dump_tree(tree: ast.AST) -> str:
+    """
+    Dump a formatted string of the AST.
+    """
+    return astor.dump_tree(tree, indentation="  ", maxline=88)
+
+
+def to_source(tree: ast.AST) -> str:
+    """
+    Dump the AST to generated source doe.
+    """
+    return astor.to_source(tree)

@@ -4,20 +4,19 @@ CLI for the representer for the Python track on Exercism.io.
 """
 from argparse import ArgumentParser, ArgumentTypeError
 
-from representer import represent
-from representer.utils import slug, directory
+import representer
 
 
 def _slug(arg):
     try:
-        return slug(arg)
+        return representer.utils.slug(arg)
     except ValueError as err:
         raise ArgumentTypeError(str(err))
 
 
 def _directory(arg):
     try:
-        return directory(arg)
+        return representer.utils.directory(arg)
     except (FileNotFoundError, PermissionError) as err:
         raise ArgumentTypeError(str(err))
 
@@ -42,7 +41,7 @@ def main():
     )
 
     args = parser.parse_args()
-    represent(args.slug, args.directory)
+    representer.represent(args.slug, args.directory)
 
 
 if __name__ == "__main__":

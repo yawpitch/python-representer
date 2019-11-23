@@ -1,29 +1,69 @@
 """
 Representer for Python.
 """
-import ast
-import astor
-
-from .transformer import RepresenterTransformer
-from .utils import Slug, Directory, reformat, to_json
+from . import utils
+from .normalizer import Normalizer
 
 
-def represent(exercise: Slug, path: Directory) -> None:
+class Representer:
+    """
+    Represent Python code in normalized form.
+    """
 
-    src = path.joinpath(exercise.replace("-", "_") + ".py")
+    def __init__(self, source: str) -> None:
+        self._tree = utils.parse(source)
+        self._normalizer = Normalizer()
 
-    transformer = RepresenterTransformer()
+    def normalize(self) -> None:
+        """
+        Normalize the tree.
+        """
+        self._tree = self._normalizer.visit(self._tree)
 
-    tree = ast.parse(src.read_text())
-    print(astor.dump_tree(tree, indentation="  ", maxline=88))
+    def dump_tree(self) -> str:
+        """
+        Dump the current state of the tree for printing.
+        """
+        return utils.dump_tree(self._tree)
 
-    tree = transformer.visit(tree)
-    print(astor.dump_tree(tree, indentation="  ", maxline=88))
+    def dump_code(self, reformat=True) -> str:
+        """
+        Dump the current tree as generate code.
+        """
+        code = utils.to_source(self._tree)
+        if reformat:
+            return utils.reformat(code)
+        return code
 
-    representation = reformat(astor.to_source(tree))
-    dst = path.joinpath("representation.txt")
-    dst.write_text(representation)
+    def dump_map(self) -> str:
+        """
+        Dump the tree's mapping of placeholders.
+        """
+        return utils.to_json(self._normalizer.get_placeholders())
 
-    mapping = to_json(transformer.get_placeholders())
-    dst = path.joinpath("mapping.json")
-    dst.write_text(mapping)
+
+def represent(slug: utils.Slug, directory: utils.Directory) -> None:
+    """
+    Normalize the `directory/slug.py` file representation.
+    """
+    src = directory.joinpath(slug.replace("-", "_") + ".py")
+    out_dst = directory.joinpath("representation.out")
+    txt_dst = directory.joinpath("representation.txt")
+    map_dst = directory.joinpath("mapping.json")
+
+    # parse the tree from the file contents
+    representation = Representer(src.read_text())
+
+    # save dump of the initial tree for debug
+    out = ["# BEGIN TREE BEFORE", representation.dump_tree(), ""]
+
+    # normalize the tree
+    representation.normalize()
+
+    # save dump of the normalized tree for debug
+    out.extend(["# BEGIN TREE AFTER", representation.dump_tree()])
+
+    # dump the representation files
+    out_dst.write_text("\n".join(out))
+    txt_dst.write_text(representation.dump_code())
+    map_dst.write_text(representation.dump_map())
