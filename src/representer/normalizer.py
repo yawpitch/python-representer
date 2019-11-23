@@ -121,7 +121,8 @@ class Normalizer(ast.NodeTransformer):
         """
         The "as" alias in `except Exception as name`.
         """
-        node.name = self.add_placeholder(node.name)
+        if node.name:
+            node.name = self.add_placeholder(node.name)
         self.generic_visit(node)
         return node
 
@@ -157,7 +158,7 @@ class Normalizer(ast.NodeTransformer):
         A list comprehension.
         """
         self.generic_visit(node)
-        node.elt = self.visit_Name(node.elt)
+        node.elt = self.generic_visit(node.elt)
         return node
 
     def visit_SetComp(self, node: ast.SetComp) -> ast.SetComp:
@@ -165,7 +166,7 @@ class Normalizer(ast.NodeTransformer):
         A set comprehension.
         """
         self.generic_visit(node)
-        node.elt = self.visit_Name(node.elt)
+        node.elt = self.generic_visit(node.elt)
         return node
 
     def visit_GeneratorExp(self, node: ast.GeneratorExp) -> ast.GeneratorExp:
@@ -173,7 +174,7 @@ class Normalizer(ast.NodeTransformer):
         A generator comprehension.
         """
         self.generic_visit(node)
-        node.elt = self.visit_Name(node.elt)
+        node.elt = self.generic_visit(node.elt)
         return node
 
     def visit_DictComp(self, node: ast.DictComp) -> ast.DictComp:
@@ -181,8 +182,8 @@ class Normalizer(ast.NodeTransformer):
         A dict comprehension.
         """
         self.generic_visit(node)
-        node.key = self.visit_Name(node.key)
-        node.value = self.visit_Name(node.value)
+        node.key = self.visit(node.key)
+        node.value = self.visit(node.value)
         return node
 
     def visit_Attribute(self, node: ast.Attribute) -> ast.Attribute:

@@ -1,6 +1,8 @@
 """
 Representer for Python.
 """
+from typing import Dict
+
 from . import utils
 from .normalizer import Normalizer
 
@@ -35,11 +37,18 @@ class Representer:
             return utils.reformat(code)
         return code
 
+    @property
+    def mapping(self) -> Dict[str, str]:
+        """
+        Get the placeholder assignments after normalize.
+        """
+        return self._normalizer.get_placeholders()
+
     def dump_map(self) -> str:
         """
         Dump the tree's mapping of placeholders.
         """
-        return utils.to_json(self._normalizer.get_placeholders())
+        return utils.to_json(self.mapping)
 
 
 def represent(slug: utils.Slug, directory: utils.Directory) -> None:
